@@ -1,0 +1,4 @@
+github.com/go-xmlfmt/xmlfmt v0.0.0-20220206211657-0a94163c4677 h1:+k/R5MXzpgWkdqHjiuirfHk6QzzTToFxlKVrvkSR/ek=
+github.com/go-xmlfmt/xmlfmt v0.0.0-20220206211657-0a94163c4677/go.mod h1:aUCEOzzezBEjDBbFBoSiya/gduyIiWYRP6CnSFIV8AM=
+github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
+github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
