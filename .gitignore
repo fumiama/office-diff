@@ -1,6 +1,6 @@
 ### Custom Entries ###
 
-result.diff
+*.diff
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,macos,linux,vim,visualstudiocode,intellij+all,go
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,macos,linux,vim,visualstudiocode,intellij+all,go

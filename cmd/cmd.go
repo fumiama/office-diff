@@ -9,20 +9,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-xmlfmt/xmlfmt"
-	"github.com/hexops/gotextdiff"
-	"github.com/hexops/gotextdiff/myers"
-	"github.com/hexops/gotextdiff/span"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/develerik/office-diff/diff"
 	"github.com/develerik/office-diff/zip"
 )
 
 const (
-	pathSrc  = "a"
-	pathDst  = "b"
-	pathNull = "/dev/null"
+	pathSrc = "a"
+	pathDst = "b"
 )
 
 func run(_ *cobra.Command, args []string) {
@@ -95,92 +91,42 @@ func run(_ *cobra.Command, args []string) {
 	}
 
 	combinedDiff := ""
+	options := diff.FileDiffOptions{
+		SrcBasePath: path.Join(dir, pathSrc),
+		DstBasePath: path.Join(dir, pathDst),
+		SrcPrefix:   viper.GetString("src-prefix"),
+		DstPrefix:   viper.GetString("dst-prefix"),
+		NoPrefix:    viper.GetBool("no-prefix"),
+	}
 
 	for _, p := range addedFiles {
-		ext := filepath.Ext(p)
+		partialDiff, err := diff.Files("", p, options)
 
-		contentsArr, err := ioutil.ReadFile(p)
 		if err != nil {
 			continue
 		}
 
-		contents := string(contentsArr)
-
-		if ext == ".xml" {
-			contents = xmlfmt.FormatXML(contents, "", "  ")
-		}
-
-		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
-		diffPath1 = strings.Replace(diffPath1, pathDst, pathSrc, 1)
-		diffPath2 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
-
-		edits := myers.ComputeEdits(span.URIFromPath(pathNull), "", contents)
-		diff := fmt.Sprint(gotextdiff.ToUnified(pathNull, diffPath2, "", edits))
-
-		combinedDiff += fmt.Sprintf("diff %s %s\n", diffPath1, diffPath2)
-		combinedDiff += diff
+		combinedDiff += partialDiff
 	}
 	for _, p := range existingFiles {
-		ext := filepath.Ext(p)
-
-		p1 := p
 		p2 := strings.Replace(p, pathSrc, pathDst, 1)
 
-		contentsArr1, err := ioutil.ReadFile(p1)
-		if err != nil {
+		partialDiff, err := diff.Files(p, p2, options)
+
+		if err != nil || partialDiff == "" {
 			continue
 		}
 
-		contentsArr2, err := ioutil.ReadFile(p2)
-		if err != nil {
-			continue
-		}
-
-		contents1 := string(contentsArr1)
-		contents2 := string(contentsArr2)
-
-		if ext == ".xml" {
-			contents1 = xmlfmt.FormatXML(contents1, "", "  ")
-		}
-		if ext == ".xml" {
-			contents2 = xmlfmt.FormatXML(contents2, "", "  ")
-		}
-
-		diffPath1 := strings.Replace(p1, dir+string(os.PathSeparator), "", 1)
-		diffPath2 := strings.Replace(p2, dir+string(os.PathSeparator), "", 1)
-
-		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents1, contents2)
-		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, diffPath2, contents1, edits))
-
-		if diff == "" {
-			continue
-		}
-
-		combinedDiff += fmt.Sprintf("diff %s %s\n", diffPath1, diffPath2)
-		combinedDiff += diff
+		combinedDiff += partialDiff
 	}
 	for _, p := range removedFiles {
-		ext := filepath.Ext(p)
+		partialDiff, err := diff.Files(p, "", options)
 
-		contentsArr, err := ioutil.ReadFile(p)
 		if err != nil {
 			continue
 		}
 
-		contents := string(contentsArr)
-
-		if ext == ".xml" {
-			contents = xmlfmt.FormatXML(contents, "", "  ")
-		}
-
-		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
-		diffPath2 := strings.Replace(diffPath1, pathSrc, pathDst, 1)
-
-		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents, "")
-		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, pathNull, contents, edits))
-
-		combinedDiff += fmt.Sprintf("diff %s %s\n", diffPath1, diffPath2)
-		combinedDiff += diff
+		combinedDiff += partialDiff
 	}
 
 	outputFile := viper.GetString("output")
