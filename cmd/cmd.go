@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"archive/zip"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,42 +14,27 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/spf13/cobra"
+
+	"github.com/develerik/office-diff/zip"
 )
 
-func run(cmd *cobra.Command, args []string) {
+func run(_ *cobra.Command, args []string) {
 	source1 := args[0]
 	source2 := args[1]
-
-	reader1, err := zip.OpenReader(source1)
-	if err != nil {
-		panic(err)
-	}
-	defer reader1.Close()
-
-	reader2, err := zip.OpenReader(source2)
-	if err != nil {
-		panic(err)
-	}
-	defer reader2.Close()
 
 	dir, err := ioutil.TempDir("", "office-diff_")
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() {
+		_ = os.RemoveAll(dir)
+	}()
 
-	for _, f := range reader1.File {
-		err = unzipFile(f, path.Join(dir, "source"))
-		if err != nil {
-			panic(err)
-		}
+	if err = zip.Extract(source1, path.Join(dir, "source")); err != nil {
+		panic(err)
 	}
-
-	for _, f := range reader2.File {
-		err = unzipFile(f, path.Join(dir, "target"))
-		if err != nil {
-			panic(err)
-		}
+	if err = zip.Extract(source2, path.Join(dir, "target")); err != nil {
+		panic(err)
 	}
 
 	addedFiles := make([]string, 0)
@@ -205,45 +188,6 @@ func run(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("done")
-}
-
-func unzipFile(f *zip.File, destination string) error {
-	// 4. Check if file paths are not vulnerable to Zip Slip
-	filePath := filepath.Join(destination, f.Name)
-	if !strings.HasPrefix(filePath, filepath.Clean(destination)+string(os.PathSeparator)) {
-		return fmt.Errorf("invalid file path: %s", filePath)
-	}
-
-	// 5. Create directory tree
-	if f.FileInfo().IsDir() {
-		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-		return err
-	}
-
-	// 6. Create a destination file for unzipped content
-	destinationFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil {
-		return err
-	}
-	defer destinationFile.Close()
-
-	// 7. Unzip the content of a file and copy it to the destination file
-	zippedFile, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer zippedFile.Close()
-
-	if _, err := io.Copy(destinationFile, zippedFile); err != nil {
-		return err
-	}
-	return nil
 }
 
 func Execute() {
