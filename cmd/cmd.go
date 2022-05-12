@@ -20,14 +20,14 @@ import (
 )
 
 const (
-	pathSource = "a"
-	pathTarget = "b"
-	pathNull   = "/dev/null"
+	pathSrc  = "a"
+	pathDst  = "b"
+	pathNull = "/dev/null"
 )
 
 func run(_ *cobra.Command, args []string) {
-	source1 := args[0]
-	source2 := args[1]
+	source := args[0]
+	destination := args[1]
 
 	dir, err := ioutil.TempDir("", "office-diff_")
 	if err != nil {
@@ -37,10 +37,10 @@ func run(_ *cobra.Command, args []string) {
 		_ = os.RemoveAll(dir)
 	}()
 
-	if err = zip.Extract(source1, path.Join(dir, pathSource)); err != nil {
+	if err = zip.Extract(source, path.Join(dir, pathSrc)); err != nil {
 		panic(err)
 	}
-	if err = zip.Extract(source2, path.Join(dir, pathTarget)); err != nil {
+	if err = zip.Extract(destination, path.Join(dir, pathDst)); err != nil {
 		panic(err)
 	}
 
@@ -48,7 +48,7 @@ func run(_ *cobra.Command, args []string) {
 	existingFiles := make([]string, 0)
 	removedFiles := make([]string, 0)
 
-	err = filepath.Walk(path.Join(dir, pathSource),
+	err = filepath.Walk(path.Join(dir, pathSrc),
 		func(p string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
@@ -58,7 +58,7 @@ func run(_ *cobra.Command, args []string) {
 				return nil
 			}
 
-			if _, err = os.Stat(strings.Replace(p, pathSource, pathTarget, 1)); errors.Is(err, os.ErrNotExist) {
+			if _, err = os.Stat(strings.Replace(p, pathSrc, pathDst, 1)); errors.Is(err, os.ErrNotExist) {
 				removedFiles = append(removedFiles, p)
 				return nil
 			}
@@ -72,7 +72,7 @@ func run(_ *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	err = filepath.Walk(path.Join(dir, pathTarget),
+	err = filepath.Walk(path.Join(dir, pathDst),
 		func(p string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
@@ -82,7 +82,7 @@ func run(_ *cobra.Command, args []string) {
 				return nil
 			}
 
-			if _, err = os.Stat(strings.Replace(p, pathTarget, pathSource, 1)); errors.Is(err, os.ErrNotExist) {
+			if _, err = os.Stat(strings.Replace(p, pathDst, pathSrc, 1)); errors.Is(err, os.ErrNotExist) {
 				addedFiles = append(addedFiles, p)
 				return nil
 			}
@@ -111,7 +111,7 @@ func run(_ *cobra.Command, args []string) {
 		}
 
 		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
-		diffPath1 = strings.Replace(diffPath1, pathTarget, pathSource, 1)
+		diffPath1 = strings.Replace(diffPath1, pathDst, pathSrc, 1)
 		diffPath2 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath(pathNull), "", contents)
@@ -124,7 +124,7 @@ func run(_ *cobra.Command, args []string) {
 		ext := filepath.Ext(p)
 
 		p1 := p
-		p2 := strings.Replace(p, pathSource, pathTarget, 1)
+		p2 := strings.Replace(p, pathSrc, pathDst, 1)
 
 		contentsArr1, err := ioutil.ReadFile(p1)
 		if err != nil {
@@ -174,7 +174,7 @@ func run(_ *cobra.Command, args []string) {
 		}
 
 		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
-		diffPath2 := strings.Replace(diffPath1, pathSource, pathTarget, 1)
+		diffPath2 := strings.Replace(diffPath1, pathSrc, pathDst, 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents, "")
 		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, pathNull, contents, edits))
@@ -211,7 +211,6 @@ func Execute() {
 	rootCmd := &cobra.Command{
 		Use:               "office-diff <file> <file>",
 		Short:             "Show changes between OpenXML office files",
-		Long:              "",
 		Run:               run,
 		Args:              cobra.ExactArgs(2),
 		DisableAutoGenTag: true,
