@@ -24,6 +24,8 @@ const (
 	pathNull   = "/dev/null"
 )
 
+var outputFile = ""
+
 func run(_ *cobra.Command, args []string) {
 	source1 := args[0]
 	source2 := args[1]
@@ -183,17 +185,21 @@ func run(_ *cobra.Command, args []string) {
 	}
 
 	if combinedDiff == "" {
-		fmt.Println("files are equal")
+		if outputFile != "" {
+			if err = ioutil.WriteFile(outputFile, []byte(""), 0755); err != nil {
+				panic(err)
+			}
+		}
 		return
 	}
 
-	fmt.Print(combinedDiff)
-
-	// err = ioutil.WriteFile("result.diff", []byte(combinedDiff), 0755)
-
-	// if err != nil {
-	// 	panic(err)
-	// }
+	if outputFile == "" {
+		fmt.Print(combinedDiff)
+	} else {
+		if err = ioutil.WriteFile(outputFile, []byte(combinedDiff), 0755); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func Execute() {
@@ -205,6 +211,8 @@ func Execute() {
 		DisableAutoGenTag: true,
 		Version:           "0.0.1", // TODO: read version from build
 	}
+
+	rootCmd.Flags().StringVar(&outputFile, "output", "", "Output to a specific file instead of stdout.")
 
 	if err := rootCmd.Execute(); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
