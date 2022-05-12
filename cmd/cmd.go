@@ -21,6 +21,7 @@ import (
 const (
 	pathSource = "a"
 	pathTarget = "b"
+	pathNull   = "/dev/null"
 )
 
 func run(_ *cobra.Command, args []string) {
@@ -112,8 +113,8 @@ func run(_ *cobra.Command, args []string) {
 		diffPath1 = strings.Replace(diffPath1, pathTarget, pathSource, 1)
 		diffPath2 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
 
-		edits := myers.ComputeEdits(span.URIFromPath("/dev/null"), "", contents)
-		diff := fmt.Sprint(gotextdiff.ToUnified("/dev/null", diffPath2, "", edits))
+		edits := myers.ComputeEdits(span.URIFromPath(pathNull), "", contents)
+		diff := fmt.Sprint(gotextdiff.ToUnified(pathNull, diffPath2, "", edits))
 
 		combinedDiff += fmt.Sprintf("diff %s %s\n", diffPath1, diffPath2)
 		combinedDiff += diff
@@ -175,7 +176,7 @@ func run(_ *cobra.Command, args []string) {
 		diffPath2 := strings.Replace(diffPath1, pathSource, pathTarget, 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents, "")
-		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, "/dev/null", contents, edits))
+		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, pathNull, contents, edits))
 
 		combinedDiff += fmt.Sprintf("diff %s %s\n", diffPath1, diffPath2)
 		combinedDiff += diff
@@ -186,13 +187,13 @@ func run(_ *cobra.Command, args []string) {
 		return
 	}
 
-	err = ioutil.WriteFile("result.diff", []byte(combinedDiff), 0755)
+	fmt.Print(combinedDiff)
 
-	if err != nil {
-		panic(err)
-	}
+	// err = ioutil.WriteFile("result.diff", []byte(combinedDiff), 0755)
 
-	fmt.Printf("done")
+	// if err != nil {
+	// 	panic(err)
+	// }
 }
 
 func Execute() {
