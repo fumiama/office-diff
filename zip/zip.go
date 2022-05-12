@@ -12,16 +12,14 @@ import (
 func unzipFile(f *zip.File, destination string) error {
 	// check if file paths are not vulnerable to Zip Slip
 	filePath := filepath.Join(destination, f.Name)
-	if !strings.HasPrefix(filePath, filepath.Clean(destination)+string(os.PathSeparator)) {
+	prefix := filepath.Clean(destination) + string(os.PathSeparator)
+	if !strings.HasPrefix(filePath, prefix) {
 		return fmt.Errorf("invalid file path: %s", filePath)
 	}
 
 	// create directory tree
 	if f.FileInfo().IsDir() {
-		if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
-			return err
-		}
-		return nil
+		return os.MkdirAll(filePath, os.ModePerm)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
@@ -33,19 +31,21 @@ func unzipFile(f *zip.File, destination string) error {
 	if err != nil {
 		return err
 	}
-	defer destinationFile.Close()
+	defer func() {
+		_ = destinationFile.Close()
+	}()
 
 	// unzip the content of a file and copy it to the destination file
 	zippedFile, err := f.Open()
 	if err != nil {
 		return err
 	}
-	defer zippedFile.Close()
+	defer func() {
+		_ = zippedFile.Close()
+	}()
 
-	if _, err = io.Copy(destinationFile, zippedFile); err != nil {
-		return err
-	}
-	return nil
+	_, err = io.Copy(destinationFile, zippedFile)
+	return err
 }
 
 func Extract(source, target string) error {
