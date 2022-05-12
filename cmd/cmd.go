@@ -25,6 +25,7 @@ const (
 )
 
 var outputFile = ""
+var exitCode = false
 
 func run(_ *cobra.Command, args []string) {
 	source1 := args[0]
@@ -190,7 +191,7 @@ func run(_ *cobra.Command, args []string) {
 				panic(err)
 			}
 		}
-		return
+		os.Exit(0)
 	}
 
 	if outputFile == "" {
@@ -200,12 +201,17 @@ func run(_ *cobra.Command, args []string) {
 			panic(err)
 		}
 	}
+
+	if exitCode {
+		os.Exit(1)
+	}
 }
 
 func Execute() {
 	rootCmd := &cobra.Command{
 		Use:               "office-diff <file> <file>",
-		Short:             "Diff tool for OpenXML Office files",
+		Short:             "Show changes between OpenXML office files",
+		Long:              "",
 		Run:               run,
 		Args:              cobra.ExactArgs(2),
 		DisableAutoGenTag: true,
@@ -213,6 +219,8 @@ func Execute() {
 	}
 
 	rootCmd.Flags().StringVar(&outputFile, "output", "", "Output to a specific file instead of stdout.")
+	rootCmd.Flags().BoolVar(&exitCode, "exit-code", false, `Make the program exit with codes similar to diff(1). That is, it exits with 1 if
+there were differences and 0 means no differences.`)
 
 	if err := rootCmd.Execute(); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
