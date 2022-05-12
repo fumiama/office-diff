@@ -18,6 +18,11 @@ import (
 	"github.com/develerik/office-diff/zip"
 )
 
+const (
+	pathSource = "a"
+	pathTarget = "b"
+)
+
 func run(_ *cobra.Command, args []string) {
 	source1 := args[0]
 	source2 := args[1]
@@ -30,10 +35,10 @@ func run(_ *cobra.Command, args []string) {
 		_ = os.RemoveAll(dir)
 	}()
 
-	if err = zip.Extract(source1, path.Join(dir, "source")); err != nil {
+	if err = zip.Extract(source1, path.Join(dir, pathSource)); err != nil {
 		panic(err)
 	}
-	if err = zip.Extract(source2, path.Join(dir, "target")); err != nil {
+	if err = zip.Extract(source2, path.Join(dir, pathTarget)); err != nil {
 		panic(err)
 	}
 
@@ -41,7 +46,7 @@ func run(_ *cobra.Command, args []string) {
 	existingFiles := make([]string, 0)
 	removedFiles := make([]string, 0)
 
-	err = filepath.Walk(path.Join(dir, "source"),
+	err = filepath.Walk(path.Join(dir, pathSource),
 		func(p string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
@@ -51,7 +56,7 @@ func run(_ *cobra.Command, args []string) {
 				return nil
 			}
 
-			if _, err = os.Stat(strings.Replace(p, "source", "target", 1)); errors.Is(err, os.ErrNotExist) {
+			if _, err = os.Stat(strings.Replace(p, pathSource, pathTarget, 1)); errors.Is(err, os.ErrNotExist) {
 				removedFiles = append(removedFiles, p)
 				return nil
 			}
@@ -65,7 +70,7 @@ func run(_ *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	err = filepath.Walk(path.Join(dir, "target"),
+	err = filepath.Walk(path.Join(dir, pathTarget),
 		func(p string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
@@ -75,7 +80,7 @@ func run(_ *cobra.Command, args []string) {
 				return nil
 			}
 
-			if _, err = os.Stat(strings.Replace(p, "target", "source", 1)); errors.Is(err, os.ErrNotExist) {
+			if _, err = os.Stat(strings.Replace(p, pathTarget, pathSource, 1)); errors.Is(err, os.ErrNotExist) {
 				addedFiles = append(addedFiles, p)
 				return nil
 			}
@@ -103,9 +108,9 @@ func run(_ *cobra.Command, args []string) {
 			contents = xmlfmt.FormatXML(contents, "", "  ")
 		}
 
-		diffPath1 := strings.Replace(p, dir, "", 1)
-		diffPath1 = strings.Replace(diffPath1, "target", "source", 1)
-		diffPath2 := strings.Replace(p, dir, "", 1)
+		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
+		diffPath1 = strings.Replace(diffPath1, pathTarget, pathSource, 1)
+		diffPath2 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath("/dev/null"), "", contents)
 		diff := fmt.Sprint(gotextdiff.ToUnified("/dev/null", diffPath2, "", edits))
@@ -117,7 +122,7 @@ func run(_ *cobra.Command, args []string) {
 		ext := filepath.Ext(p)
 
 		p1 := p
-		p2 := strings.Replace(p, "source", "target", 1)
+		p2 := strings.Replace(p, pathSource, pathTarget, 1)
 
 		contentsArr1, err := ioutil.ReadFile(p1)
 		if err != nil {
@@ -139,8 +144,8 @@ func run(_ *cobra.Command, args []string) {
 			contents2 = xmlfmt.FormatXML(contents2, "", "  ")
 		}
 
-		diffPath1 := strings.Replace(p1, dir, "", 1)
-		diffPath2 := strings.Replace(p2, dir, "", 1)
+		diffPath1 := strings.Replace(p1, dir+string(os.PathSeparator), "", 1)
+		diffPath2 := strings.Replace(p2, dir+string(os.PathSeparator), "", 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents1, contents2)
 		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, diffPath2, contents1, edits))
@@ -166,8 +171,8 @@ func run(_ *cobra.Command, args []string) {
 			contents = xmlfmt.FormatXML(contents, "", "  ")
 		}
 
-		diffPath1 := strings.Replace(p, dir, "", 1)
-		diffPath2 := strings.Replace(diffPath1, "source", "target", 1)
+		diffPath1 := strings.Replace(p, dir+string(os.PathSeparator), "", 1)
+		diffPath2 := strings.Replace(diffPath1, pathSource, pathTarget, 1)
 
 		edits := myers.ComputeEdits(span.URIFromPath(diffPath1), contents, "")
 		diff := fmt.Sprint(gotextdiff.ToUnified(diffPath1, "/dev/null", contents, edits))
