@@ -14,6 +14,7 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/develerik/office-diff/zip"
 )
@@ -23,9 +24,6 @@ const (
 	pathTarget = "b"
 	pathNull   = "/dev/null"
 )
-
-var outputFile = ""
-var exitCode = false
 
 func run(_ *cobra.Command, args []string) {
 	source1 := args[0]
@@ -185,6 +183,8 @@ func run(_ *cobra.Command, args []string) {
 		combinedDiff += diff
 	}
 
+	outputFile := viper.GetString("output")
+
 	if combinedDiff == "" {
 		if outputFile != "" {
 			if err = ioutil.WriteFile(outputFile, []byte(""), 0755); err != nil {
@@ -202,7 +202,7 @@ func run(_ *cobra.Command, args []string) {
 		}
 	}
 
-	if exitCode {
+	if viper.GetBool("exit-code") {
 		os.Exit(1)
 	}
 }
@@ -218,9 +218,17 @@ func Execute() {
 		Version:           "0.0.1", // TODO: read version from build
 	}
 
-	rootCmd.Flags().StringVar(&outputFile, "output", "", "Output to a specific file instead of stdout.")
-	rootCmd.Flags().BoolVar(&exitCode, "exit-code", false, `Make the program exit with codes similar to diff(1). That is, it exits with 1 if
+	rootCmd.Flags().String("output", "", "Output to a specific file instead of stdout.")
+	rootCmd.Flags().String("src-prefix", "a/", "[WIP] Show the given source prefix instead of 'a/'.")
+	rootCmd.Flags().String("dst-prefix", "b/", "[WIP] Show the given destination prefix instead of 'b/'.")
+	rootCmd.Flags().Bool("no-prefix", false, "[WIP] Do not show any source or destination prefix.")
+	rootCmd.Flags().Bool("exit-code", false, `Make the program exit with codes similar to diff(1). That is, it exits with 1 if
 there were differences and 0 means no differences.`)
+
+	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
