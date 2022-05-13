@@ -3,6 +3,7 @@ package diff
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,8 +14,6 @@ import (
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
 )
-
-// TODO: don't add binary content to diff (see git example)
 
 type FileDiffOptions struct {
 	SrcBasePath string
@@ -65,10 +64,6 @@ func Directories(src, dst string) (map[string][]string, error) {
 				return nil
 			}
 
-			if !isFileType(p, fileTypes["xml"]) {
-				return nil // TODO: remove when blob handling is implemented
-			}
-
 			if _, err = os.Stat(strings.Replace(p, src, dst, 1)); errors.Is(err, os.ErrNotExist) {
 				result["removed"] = append(result["removed"], p)
 				return nil
@@ -88,10 +83,6 @@ func Directories(src, dst string) (map[string][]string, error) {
 				return nil
 			}
 
-			if !isFileType(p, fileTypes["xml"]) {
-				return nil // TODO: remove when blob handling is implemented
-			}
-
 			if _, err = os.Stat(strings.Replace(p, dst, src, 1)); errors.Is(err, os.ErrNotExist) {
 				result["added"] = append(result["added"], p)
 				return nil
@@ -105,6 +96,34 @@ func Directories(src, dst string) (map[string][]string, error) {
 	}
 
 	return result, nil
+}
+
+func binaryIdentical(src, dst string) (bool, error) {
+	srcR, err := os.Open(src)
+
+	if err != nil {
+		return false, err
+	}
+
+	defer func() {
+		_ = srcR.Close()
+	}()
+
+	dstR, err := os.Open(dst)
+
+	if err != nil {
+		return false, err
+	}
+
+	defer func() {
+		_ = dstR.Close()
+	}()
+
+	if _, err = io.Copy(ioutil.Discard, NewCompareReader(srcR, dstR)); err != nil {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func Files(src, dst string, opts FileDiffOptions) (string, error) {
@@ -132,6 +151,15 @@ func Files(src, dst string, opts FileDiffOptions) (string, error) {
 	}
 
 	result := fmt.Sprintf("diff %s %s\n", srcDisplay, dstDisplay)
+
+	if !isFileType(dst, fileTypes["xml"]) {
+		if identical, err := binaryIdentical(src, dst); err != nil {
+			return "", err
+		} else if !identical {
+			result += fmt.Sprintf("Binary files %s and %s differ\n", srcDisplay, dstDisplay)
+			return result, nil
+		}
+	}
 
 	if src == "" { // added file
 		contents, err := readTextFile(dst)
