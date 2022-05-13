@@ -1,0 +1,41 @@
+project_name: office-diff
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - binary: office-diff
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "6"
+      - "7"
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+release:
+  prerelease: auto
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: Others
+      order: 999

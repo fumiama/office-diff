@@ -60,6 +60,10 @@ func Directories(src, dst string) (map[string][]string, error) {
 
 	err := filepath.Walk(src,
 		func(p string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
 			if info.IsDir() {
 				return nil
 			}
@@ -67,6 +71,8 @@ func Directories(src, dst string) (map[string][]string, error) {
 			if _, err = os.Stat(strings.Replace(p, src, dst, 1)); errors.Is(err, os.ErrNotExist) {
 				result["removed"] = append(result["removed"], p)
 				return nil
+			} else if err != nil {
+				return err
 			}
 
 			result["existing"] = append(result["existing"], p)
@@ -79,6 +85,10 @@ func Directories(src, dst string) (map[string][]string, error) {
 
 	err = filepath.Walk(dst,
 		func(p string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
 			if info.IsDir() {
 				return nil
 			}
@@ -86,6 +96,8 @@ func Directories(src, dst string) (map[string][]string, error) {
 			if _, err = os.Stat(strings.Replace(p, dst, src, 1)); errors.Is(err, os.ErrNotExist) {
 				result["added"] = append(result["added"], p)
 				return nil
+			} else if err != nil {
+				return err
 			}
 
 			return nil

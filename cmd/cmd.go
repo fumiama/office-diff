@@ -19,6 +19,11 @@ const (
 	pathDst = "b"
 )
 
+type Options struct {
+	Version string
+	Date    string
+}
+
 func run(_ *cobra.Command, args []string) {
 	dir, err := ioutil.TempDir("", "office-diff_")
 	if err != nil {
@@ -106,14 +111,14 @@ func run(_ *cobra.Command, args []string) {
 	}
 }
 
-func Execute() {
+func Execute(opts *Options) {
 	rootCmd := &cobra.Command{
 		Use:               "office-diff <file> <file>",
 		Short:             "Show changes between OpenXML office files",
 		Run:               run,
 		Args:              cobra.ExactArgs(2),
 		DisableAutoGenTag: true,
-		Version:           "0.0.1", // TODO: read version from build
+		Version:           fmt.Sprintf("%s (%s)", opts.Version, opts.Date),
 	}
 
 	rootCmd.Flags().String("output", "", "Output to a specific file instead of stdout.")
