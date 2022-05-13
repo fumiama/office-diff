@@ -20,9 +20,6 @@ const (
 )
 
 func run(_ *cobra.Command, args []string) {
-	source := args[0]
-	destination := args[1]
-
 	dir, err := ioutil.TempDir("", "office-diff_")
 	if err != nil {
 		panic(err)
@@ -31,11 +28,13 @@ func run(_ *cobra.Command, args []string) {
 		_ = os.RemoveAll(dir)
 	}()
 
-	if err = zip.Extract(source, path.Join(dir, pathSrc)); err != nil {
-		panic(err)
+	if err = zip.Extract(args[0], path.Join(dir, pathSrc)); err != nil {
+		fmt.Printf("error: Could not access '%s'\n", args[0])
+		os.Exit(1)
 	}
-	if err = zip.Extract(destination, path.Join(dir, pathDst)); err != nil {
-		panic(err)
+	if err = zip.Extract(args[1], path.Join(dir, pathDst)); err != nil {
+		fmt.Printf("error: Could not access '%s'\n", args[1])
+		os.Exit(1)
 	}
 
 	files, err := diff.Directories(path.Join(dir, pathSrc), path.Join(dir, pathDst))
