@@ -26,15 +26,27 @@ type FileDiffOptions struct {
 
 const nullPath = "/dev/null"
 
+var fileTypes = map[string][]string{
+	"xml": {".xml", ".xml.rels", ".rels"},
+}
+
+func isFileType(filename string, typeExts []string) bool {
+	for _, ext := range typeExts {
+		if strings.HasSuffix(filename, ext) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func readTextFile(filename string) (string, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
 
-	ext := filepath.Ext(filename)
-
-	if ext == ".xml" {
+	if isFileType(filename, fileTypes["xml"]) {
 		return xmlfmt.FormatXML(string(data), "", "  "), nil
 	} else {
 		return string(data), nil
@@ -53,7 +65,7 @@ func Directories(src, dst string) (map[string][]string, error) {
 				return nil
 			}
 
-			if filepath.Ext(p) != ".xml" {
+			if !isFileType(p, fileTypes["xml"]) {
 				return nil // TODO: remove when blob handling is implemented
 			}
 
@@ -76,7 +88,7 @@ func Directories(src, dst string) (map[string][]string, error) {
 				return nil
 			}
 
-			if filepath.Ext(p) != ".xml" {
+			if !isFileType(p, fileTypes["xml"]) {
 				return nil // TODO: remove when blob handling is implemented
 			}
 
