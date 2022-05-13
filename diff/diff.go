@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,8 @@ import (
 	"github.com/hexops/gotextdiff/span"
 )
 
+// TODO: don't add binary content to diff (see git example)
+
 type FileDiffOptions struct {
 	SrcBasePath string
 	DstBasePath string
@@ -23,7 +26,7 @@ type FileDiffOptions struct {
 
 const nullPath = "/dev/null"
 
-func readFile(filename string) (string, error) {
+func readTextFile(filename string) (string, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return "", err
@@ -36,6 +39,60 @@ func readFile(filename string) (string, error) {
 	} else {
 		return string(data), nil
 	}
+}
+
+func Directories(src, dst string) (map[string][]string, error) {
+	result := make(map[string][]string, 0)
+	result["added"] = make([]string, 0)
+	result["existing"] = make([]string, 0)
+	result["removed"] = make([]string, 0)
+
+	err := filepath.Walk(src,
+		func(p string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+
+			if filepath.Ext(p) != ".xml" {
+				return nil // TODO: remove when blob handling is implemented
+			}
+
+			if _, err = os.Stat(strings.Replace(p, src, dst, 1)); errors.Is(err, os.ErrNotExist) {
+				result["removed"] = append(result["removed"], p)
+				return nil
+			}
+
+			result["existing"] = append(result["existing"], p)
+			return nil
+		})
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = filepath.Walk(dst,
+		func(p string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+
+			if filepath.Ext(p) != ".xml" {
+				return nil // TODO: remove when blob handling is implemented
+			}
+
+			if _, err = os.Stat(strings.Replace(p, dst, src, 1)); errors.Is(err, os.ErrNotExist) {
+				result["added"] = append(result["added"], p)
+				return nil
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func Files(src, dst string, opts FileDiffOptions) (string, error) {
@@ -65,7 +122,7 @@ func Files(src, dst string, opts FileDiffOptions) (string, error) {
 	result := fmt.Sprintf("diff %s %s\n", srcDisplay, dstDisplay)
 
 	if src == "" { // added file
-		contents, err := readFile(dst)
+		contents, err := readTextFile(dst)
 
 		if err != nil {
 			return "", err
@@ -77,7 +134,7 @@ func Files(src, dst string, opts FileDiffOptions) (string, error) {
 	}
 
 	if dst == "" { // removed file
-		contents, err := readFile(src)
+		contents, err := readTextFile(src)
 		if err != nil {
 			return "", err
 		}
@@ -85,13 +142,13 @@ func Files(src, dst string, opts FileDiffOptions) (string, error) {
 		edits := myers.ComputeEdits(span.URIFromPath(srcDisplay), contents, "")
 		diff := fmt.Sprint(gotextdiff.ToUnified(srcDisplay, dstDisplay, contents, edits))
 		result += diff
-	} else { // modified file
-		contentsSrc, err := readFile(src)
+	} else { // existing file
+		contentsSrc, err := readTextFile(src)
 		if err != nil {
 			return "", err
 		}
 
-		contentsDst, err := readFile(dst)
+		contentsDst, err := readTextFile(dst)
 		if err != nil {
 			return "", err
 		}

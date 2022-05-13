@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -40,51 +38,7 @@ func run(_ *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	addedFiles := make([]string, 0)
-	existingFiles := make([]string, 0)
-	removedFiles := make([]string, 0)
-
-	err = filepath.Walk(path.Join(dir, pathSrc),
-		func(p string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				return nil
-			}
-
-			if filepath.Ext(p) != ".xml" {
-				return nil
-			}
-
-			if _, err = os.Stat(strings.Replace(p, pathSrc, pathDst, 1)); errors.Is(err, os.ErrNotExist) {
-				removedFiles = append(removedFiles, p)
-				return nil
-			}
-
-			existingFiles = append(existingFiles, p)
-
-			return nil
-		})
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = filepath.Walk(path.Join(dir, pathDst),
-		func(p string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				return nil
-			}
-
-			if filepath.Ext(p) != ".xml" {
-				return nil
-			}
-
-			if _, err = os.Stat(strings.Replace(p, pathDst, pathSrc, 1)); errors.Is(err, os.ErrNotExist) {
-				addedFiles = append(addedFiles, p)
-				return nil
-			}
-
-			return nil
-		})
+	files, err := diff.Directories(path.Join(dir, pathSrc), path.Join(dir, pathDst))
 
 	if err != nil {
 		panic(err)
@@ -99,7 +53,7 @@ func run(_ *cobra.Command, args []string) {
 		NoPrefix:    viper.GetBool("no-prefix"),
 	}
 
-	for _, p := range addedFiles {
+	for _, p := range files["added"] {
 		partialDiff, err := diff.Files("", p, options)
 
 		if err != nil {
@@ -108,7 +62,7 @@ func run(_ *cobra.Command, args []string) {
 
 		combinedDiff += partialDiff
 	}
-	for _, p := range existingFiles {
+	for _, p := range files["existing"] {
 		p2 := strings.Replace(p, pathSrc, pathDst, 1)
 
 		partialDiff, err := diff.Files(p, p2, options)
@@ -119,7 +73,7 @@ func run(_ *cobra.Command, args []string) {
 
 		combinedDiff += partialDiff
 	}
-	for _, p := range removedFiles {
+	for _, p := range files["removed"] {
 		partialDiff, err := diff.Files(p, "", options)
 
 		if err != nil {
