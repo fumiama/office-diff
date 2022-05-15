@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -9,10 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-xmlfmt/xmlfmt"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
+
+	"github.com/develerik/office-diff/format"
 )
 
 type FileDiffOptions struct {
@@ -46,7 +48,9 @@ func readTextFile(filename string) (string, error) {
 	}
 
 	if isFileType(filename, fileTypes["xml"]) {
-		return xmlfmt.FormatXML(string(data), "", "  "), nil
+		buf := new(bytes.Buffer)
+		err = format.Xml(bytes.NewReader(data), buf, "  ")
+		return buf.String(), err
 	} else {
 		return string(data), nil
 	}

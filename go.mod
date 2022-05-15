@@ -3,10 +3,10 @@ module github.com/develerik/office-diff
 go 1.18
 
 require (
-	github.com/go-xmlfmt/xmlfmt v0.0.0-20220206211657-0a94163c4677
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.11.0
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -22,9 +22,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/sys v0.0.0-20220513210249-45d2b4557a2a // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.0-20220512140231-539c8e751b99 // indirect
 )
