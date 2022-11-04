@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -25,28 +24,11 @@ type Options struct {
 }
 
 func run(_ *cobra.Command, args []string) {
-	dir, err := ioutil.TempDir("", "office-diff_")
+	dir, err := os.MkdirTemp("", "office-diff_")
 	if err != nil {
 		panic(err)
 	}
-	defer func() {
-		_ = os.RemoveAll(dir)
-	}()
-
-	if err = zip.Extract(args[0], path.Join(dir, pathSrc)); err != nil {
-		fmt.Printf("error: Could not access '%s'\n", args[0])
-		os.Exit(1)
-	}
-	if err = zip.Extract(args[1], path.Join(dir, pathDst)); err != nil {
-		fmt.Printf("error: Could not access '%s'\n", args[1])
-		os.Exit(1)
-	}
-
-	files, err := diff.Directories(path.Join(dir, pathSrc), path.Join(dir, pathDst))
-
-	if err != nil {
-		panic(err)
-	}
+	defer os.RemoveAll(dir)
 
 	combinedDiff := ""
 	options := diff.FileDiffOptions{
@@ -55,6 +37,21 @@ func run(_ *cobra.Command, args []string) {
 		SrcPrefix:   viper.GetString("src-prefix"),
 		DstPrefix:   viper.GetString("dst-prefix"),
 		NoPrefix:    viper.GetBool("no-prefix"),
+	}
+
+	if err := zip.Extract(args[0], options.SrcBasePath); err != nil {
+		fmt.Printf("error: Could not access '%s'\n", args[0])
+		os.Exit(1)
+	}
+	if err := zip.Extract(args[1], options.DstBasePath); err != nil {
+		fmt.Printf("error: Could not access '%s'\n", args[1])
+		os.Exit(1)
+	}
+
+	files, err := diff.Directories(options.SrcBasePath, options.DstBasePath)
+
+	if err != nil {
+		panic(err)
 	}
 
 	for _, p := range files["added"] {
@@ -67,7 +64,7 @@ func run(_ *cobra.Command, args []string) {
 		combinedDiff += partialDiff
 	}
 	for _, p := range files["existing"] {
-		p2 := strings.Replace(p, pathSrc, pathDst, 1)
+		p2 := strings.Replace(p, options.SrcBasePath, options.DstBasePath, 1)
 
 		partialDiff, err := diff.Files(p, p2, options)
 
@@ -91,7 +88,7 @@ func run(_ *cobra.Command, args []string) {
 
 	if combinedDiff == "" {
 		if outputFile != "" {
-			if err = ioutil.WriteFile(outputFile, []byte(""), 0755); err != nil {
+			if err = os.WriteFile(outputFile, []byte(""), 0755); err != nil {
 				panic(err)
 			}
 		}
@@ -101,7 +98,7 @@ func run(_ *cobra.Command, args []string) {
 	if outputFile == "" {
 		fmt.Print(combinedDiff)
 	} else {
-		if err = ioutil.WriteFile(outputFile, []byte(combinedDiff), 0755); err != nil {
+		if err = os.WriteFile(outputFile, []byte(combinedDiff), 0755); err != nil {
 			panic(err)
 		}
 	}

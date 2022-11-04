@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +39,7 @@ func isFileType(filename string, typeExts []string) bool {
 }
 
 func readTextFile(filename string) (string, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
@@ -117,9 +116,7 @@ func binaryIdentical(src, dst string) (bool, error) {
 		return false, err
 	}
 
-	defer func() {
-		_ = srcR.Close()
-	}()
+	defer srcR.Close()
 
 	dstR, err := os.Open(dst)
 
@@ -127,15 +124,11 @@ func binaryIdentical(src, dst string) (bool, error) {
 		return false, err
 	}
 
-	defer func() {
-		_ = dstR.Close()
-	}()
+	defer dstR.Close()
 
-	if _, err = io.Copy(ioutil.Discard, NewCompareReader(srcR, dstR)); err != nil {
-		return false, nil
-	}
+	_, err = io.Copy(io.Discard, NewCompareReader(srcR, dstR))
 
-	return true, nil
+	return err == nil, nil
 }
 
 func Files(src, dst string, opts FileDiffOptions) (string, error) {

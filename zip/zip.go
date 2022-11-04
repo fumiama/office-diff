@@ -27,22 +27,18 @@ func unzipFile(f *zip.File, destination string) error {
 	}
 
 	// create a destination file for unzipped content
-	destinationFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	destinationFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = destinationFile.Close()
-	}()
+	defer destinationFile.Close()
 
 	// unzip the content of a file and copy it to the destination file
 	zippedFile, err := f.Open()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = zippedFile.Close()
-	}()
+	defer zippedFile.Close()
 
 	_, err = io.Copy(destinationFile, zippedFile)
 	return err
@@ -53,9 +49,7 @@ func Extract(source, target string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = r.Close()
-	}()
+	defer r.Close()
 
 	for _, f := range r.File {
 		err = unzipFile(f, target)
